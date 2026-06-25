@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>GL Hub</title>
+  <meta name="description" content="GL Hub — a release calendar and show tracker for Thai GL (Girls' Love) series. Find out when and where to watch, legally, on official platforms." />
+  <meta name="theme-color" content="#0f1115" />
+
+  <!-- PWA manifest + icons (see manifest.json for full icon list/sizes) -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <!--
+    Cloudflare Web Analytics beacon.
+    Replace CF_BEACON_TOKEN with the real token from your Cloudflare dashboard
+    (Analytics & Logs > Web Analytics > Manage site). This beacon only counts
+    pageviews; it does not use cookies or collect personal data.
+  -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CF_BEACON_TOKEN"}'></script>
+</head>
+<body>
+  <!-- Lets keyboard users jump straight past the header/nav -->
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="site-header__bar">
+      <a class="brand" href="#/" aria-label="GL Hub home">GL Hub</a>
+      <!-- Hidden until the browser fires beforeinstallprompt (see app.js) -->
+      <button id="installBtn" class="btn btn--ghost" type="button" hidden>Install app</button>
+    </div>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#/" data-route="/">Home</a>
+      <a href="#/browse" data-route="/browse">Browse</a>
+      <a href="#/saved" data-route="/saved">Saved</a>
+      <a href="#/about" data-route="/about">About</a>
+    </nav>
+  </header>
+
+  <!-- app.js renders every view into #app; #main just gives us a focus target -->
+  <main id="main" class="app" tabindex="-1">
+    <div id="app"></div>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      GL Hub links out to official platforms — it never hosts or streams video itself.
+      Not affiliated with or endorsed by any studio or platform.
+    </p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
