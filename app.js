@@ -7,11 +7,13 @@
 //   shows.js      -> read-only show/META data
 //   watchlist.js  -> the ONLY thing allowed to touch localStorage
 //   analytics.js  -> the ONLY thing allowed to log/send events
+//   settings.js   -> the ONLY thing allowed to persist user preferences
 // app.js never touches localStorage or an analytics vendor directly.
 
 import { shows, META } from "./shows.js";
 import { getSaved, isSaved, toggle as toggleSaved } from "./watchlist.js";
 import { track } from "./analytics.js";
+import { getSavedTheme, saveTheme } from "./settings.js";
 
 const DAYS = [
   "Monday",
@@ -23,8 +25,41 @@ const DAYS = [
   "Sunday",
 ];
 
-const appEl = document.getElementById("app");
+const appEl  = document.getElementById("app");
 const mainEl = document.getElementById("main");
+
+// ---------------------------------------------------------------------------
+// Theme management
+// ---------------------------------------------------------------------------
+
+function currentTheme() {
+  const explicit = document.documentElement.dataset.theme;
+  if (explicit === "light" || explicit === "dark") return explicit;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function updateThemeToggle() {
+  const btn = document.getElementById("themeToggle");
+  if (!btn) return;
+  const dark = currentTheme() === "dark";
+  btn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+  btn.textContent = dark ? "☀" : "☽";
+}
+
+function toggleTheme() {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  saveTheme(next);
+  updateThemeToggle();
+}
+
+function initTheme() {
+  const saved = getSavedTheme();
+  if (saved === "light" || saved === "dark") {
+    document.documentElement.dataset.theme = saved;
+  }
+  updateThemeToggle();
+}
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -74,10 +109,10 @@ function todayWeekdayName() {
 }
 
 const STATUS_LABELS = {
-  upcoming: "Upcoming",
-  airing: "Airing",
+  upcoming:  "Upcoming",
+  airing:    "Airing",
   completed: "Completed",
-  hiatus: "On hiatus",
+  hiatus:    "On hiatus",
 };
 
 function statusBadge(status) {
@@ -121,47 +156,50 @@ function showCardHTML(show) {
       <button class="card__save ${saved ? "is-saved" : ""}" type="button"
               data-action="toggle-save" data-show-id="${show.id}"
               aria-pressed="${saved}" aria-label="${saved ? "Remove from saved shows" : "Save show"}">
-        &#9825;
+        ${saved ? "&#9829;" : "&#9825;"}
       </button>
     </li>`;
 }
 
 // ---------------------------------------------------------------------------
-// Home view — weekly calendar
+// Home view — today featured, rest of week in compact grid
 // ---------------------------------------------------------------------------
+
+function renderDayColumn(day, isToday) {
+  const dayShows = shows.filter(
+    (s) => (s.status === "airing" || s.status === "upcoming") && s.schedule?.airDay === day
+  );
+  return `
+    <section class="day-col${isToday ? " day-col--today" : ""}">
+      <h2 class="day-col__heading">
+        ${escapeHTML(day)}${isToday ? ' <span class="today-pill">Today</span>' : ""}
+      </h2>
+      ${dayShows.length
+        ? `<ul class="card-list">${dayShows.map(showCardHTML).join("")}</ul>`
+        : `<p class="empty-note">Nothing scheduled${isToday ? " today" : ""}</p>`
+      }
+    </section>`;
+}
 
 function renderHome() {
   const airingNow = shows.filter((s) => s.status === "airing");
-  const today = todayWeekdayName();
-
-  const dayColumns = DAYS.map((day) => {
-    const dayShows = shows.filter(
-      (s) => (s.status === "airing" || s.status === "upcoming") && s.schedule?.airDay === day
-    );
-    const isToday = day === today;
-    return `
-      <section class="day-col ${isToday ? "day-col--today" : ""}">
-        <h2 class="day-col__heading">${day}${isToday ? ' <span class="today-pill">Today</span>' : ""}</h2>
-        ${
-          dayShows.length
-            ? `<ul class="card-list">${dayShows.map(showCardHTML).join("")}</ul>`
-            : `<p class="empty-note">Nothing scheduled</p>`
-        }
-      </section>`;
-  }).join("");
+  const today     = todayWeekdayName();
+  const otherDays = DAYS.filter((d) => d !== today);
 
   appEl.innerHTML = `
     <h1 class="view-title">This week</h1>
-    ${
-      airingNow.length
-        ? `
+    ${airingNow.length ? `
       <section class="rail">
-        <h2 class="rail__heading">Airing now</h2>
+        <p class="rail__heading">Airing now</p>
         <ul class="card-list card-list--rail">${airingNow.map(showCardHTML).join("")}</ul>
-      </section>`
-        : ""
-    }
-    <div class="week-grid">${dayColumns}</div>
+      </section>` : ""}
+    <div class="today-feature">
+      ${renderDayColumn(today, true)}
+    </div>
+    <p class="section-label">Rest of the week</p>
+    <div class="week-grid">
+      ${otherDays.map((d) => renderDayColumn(d, false)).join("")}
+    </div>
   `;
 }
 
@@ -192,9 +230,9 @@ function filteredShows() {
 }
 
 function renderBrowse() {
-  const results = filteredShows();
+  const results  = filteredShows();
   const statuses = ["all", "airing", "upcoming", "completed", "hiatus"];
-  const tags = allTags();
+  const tags     = allTags();
 
   appEl.innerHTML = `
     <h1 class="view-title">Browse</h1>
@@ -211,9 +249,7 @@ function renderBrowse() {
         )
         .join("")}
     </div>
-    ${
-      tags.length
-        ? `
+    ${tags.length ? `
     <div class="chip-row" role="group" aria-label="Filter by tag">
       <button class="chip ${browseState.tag === "all" ? "chip--active" : ""}" type="button"
               data-filter="tag" data-value="all">All tags</button>
@@ -224,14 +260,11 @@ function renderBrowse() {
                 data-filter="tag" data-value="${escapeHTML(t)}">${escapeHTML(t)}</button>`
         )
         .join("")}
-    </div>`
-        : ""
-    }
+    </div>` : ""}
     <p class="result-count">${results.length} show${results.length === 1 ? "" : "s"}</p>
-    ${
-      results.length
-        ? `<ul class="card-list">${results.map(showCardHTML).join("")}</ul>`
-        : `<p class="empty-note">No shows match your search.</p>`
+    ${results.length
+      ? `<ul class="card-list">${results.map(showCardHTML).join("")}</ul>`
+      : `<p class="empty-note">No shows match — try clearing a filter.</p>`
     }
   `;
 
@@ -312,27 +345,23 @@ function renderShowDetail(id) {
                     data-action="toggle-save" data-show-id="${show.id}" aria-pressed="${saved}">
               ${saved ? "&#9829; Saved" : "&#9825; Save"}
             </button>
-            ${
-              show.trailerUrl
-                ? `<a class="btn btn--ghost" href="${escapeHTML(show.trailerUrl)}" target="_blank" rel="noopener noreferrer">Watch trailer</a>`
-                : ""
-            }
+            ${show.trailerUrl
+              ? `<a class="btn btn--ghost" href="${escapeHTML(show.trailerUrl)}" target="_blank" rel="noopener noreferrer">Watch trailer</a>`
+              : ""}
           </div>
         </div>
       </div>
 
       <p class="show-detail__synopsis">${escapeHTML(show.synopsis || "")}</p>
 
-      ${
-        show.tags?.length
-          ? `<ul class="tag-list">${show.tags.map((t) => `<li class="tag">${escapeHTML(t)}</li>`).join("")}</ul>`
-          : ""
-      }
+      ${show.tags?.length
+        ? `<ul class="tag-list">${show.tags.map((t) => `<li class="tag">${escapeHTML(t)}</li>`).join("")}</ul>`
+        : ""}
 
-      <h2>Where to watch</h2>
+      <h2 class="section-heading">Where to watch</h2>
       ${watchHTML || `<p class="empty-note">No watch links yet.</p>`}
 
-      <h2>Cast</h2>
+      <h2 class="section-heading">Cast</h2>
       <ul class="cast-list">${castHTML || `<p class="empty-note">No cast info yet.</p>`}</ul>
     </article>
   `;
@@ -343,15 +372,14 @@ function renderShowDetail(id) {
 // ---------------------------------------------------------------------------
 
 function renderSaved() {
-  const savedIds = getSaved();
+  const savedIds   = getSaved();
   const savedShows = shows.filter((s) => savedIds.includes(s.id));
 
   appEl.innerHTML = `
     <h1 class="view-title">Saved</h1>
-    ${
-      savedShows.length
-        ? `<ul class="card-list">${savedShows.map(showCardHTML).join("")}</ul>`
-        : `<p class="empty-note">You haven&rsquo;t saved any shows yet. Tap the heart on a show to save it here.</p>`
+    ${savedShows.length
+      ? `<ul class="card-list">${savedShows.map(showCardHTML).join("")}</ul>`
+      : `<p class="empty-note">no faves yet — go find your ship 💗</p>`
     }
   `;
 }
@@ -363,11 +391,13 @@ function renderSaved() {
 function renderAbout() {
   appEl.innerHTML = `
     <h1 class="view-title">About &amp; credits</h1>
-    <p>${escapeHTML(META.attribution.tmdb)}</p>
-    <p>Rights holders can reach me here:
-      <a href="mailto:${escapeHTML(META.contactEmail)}">${escapeHTML(META.contactEmail)}</a>
-    </p>
-    <p>Faen is an independent fan project. It is not affiliated with or endorsed by any studio, network, or streaming platform, and it never hosts or streams video — it only links to official sources.</p>
+    <div class="about-section">
+      <p>${escapeHTML(META.attribution.tmdb)}</p>
+      <p>Rights holders can reach me here:
+        <a href="mailto:${escapeHTML(META.contactEmail)}">${escapeHTML(META.contactEmail)}</a>
+      </p>
+      <p>Faen is an independent fan project. It is not affiliated with or endorsed by any studio, network, or streaming platform, and it never hosts or streams video — it only links to official sources.</p>
+    </div>
   `;
 }
 
@@ -380,8 +410,8 @@ function parseHash() {
   const showMatch = hash.match(/^\/show\/(.+)$/);
   if (showMatch) return { view: "show", id: decodeURIComponent(showMatch[1]) };
   if (hash === "/browse") return { view: "browse" };
-  if (hash === "/saved") return { view: "saved" };
-  if (hash === "/about") return { view: "about" };
+  if (hash === "/saved")  return { view: "saved" };
+  if (hash === "/about")  return { view: "about" };
   return { view: "home" };
 }
 
@@ -396,20 +426,11 @@ function updateNavActiveState(route) {
 
 function renderRoute(route) {
   switch (route.view) {
-    case "show":
-      renderShowDetail(route.id);
-      break;
-    case "browse":
-      renderBrowse();
-      break;
-    case "saved":
-      renderSaved();
-      break;
-    case "about":
-      renderAbout();
-      break;
-    default:
-      renderHome();
+    case "show":   renderShowDetail(route.id); break;
+    case "browse": renderBrowse();             break;
+    case "saved":  renderSaved();              break;
+    case "about":  renderAbout();              break;
+    default:       renderHome();
   }
 }
 
@@ -420,7 +441,7 @@ function dispatch() {
 }
 
 // ---------------------------------------------------------------------------
-// Delegated click handling (save button, watch links, social links)
+// Delegated click handling (save button, watch links, social links, filters)
 // Attached once; works for every view since #app's contents get swapped out.
 // ---------------------------------------------------------------------------
 
@@ -428,7 +449,7 @@ appEl.addEventListener("click", (event) => {
   const saveBtn = event.target.closest('[data-action="toggle-save"]');
   if (saveBtn) {
     event.preventDefault();
-    const id = saveBtn.dataset.showId;
+    const id    = saveBtn.dataset.showId;
     const saved = toggleSaved(id);
     track("toggle_watchlist", { showId: id, saved });
     syncSaveButtons(id, saved);
@@ -438,9 +459,9 @@ appEl.addEventListener("click", (event) => {
   const watchLink = event.target.closest('[data-action="open-watch"]');
   if (watchLink) {
     track("open_watch_link", {
-      showId: watchLink.dataset.showId,
+      showId:   watchLink.dataset.showId,
       platform: watchLink.dataset.platform,
-      region: watchLink.dataset.region,
+      region:   watchLink.dataset.region,
     });
     return; // let the <a> navigate normally (new tab)
   }
@@ -465,6 +486,7 @@ function syncSaveButtons(id, saved) {
     btn.classList.toggle("btn--active", saved);
     btn.setAttribute("aria-pressed", String(saved));
     if (btn.classList.contains("card__save")) {
+      btn.innerHTML = saved ? "&#9829;" : "&#9825;";
       btn.setAttribute("aria-label", saved ? "Remove from saved shows" : "Save show");
     } else {
       btn.innerHTML = saved ? "&#9829; Saved" : "&#9825; Save";
@@ -483,8 +505,6 @@ function sendVirtualPageview() {
   // replaceState. Hash changes alone don't trigger it, so we re-announce the
   // current URL via replaceState (not pushState, to avoid creating a
   // duplicate back-button entry for a navigation that already happened).
-  // This is a best-effort nudge — CF's internals aren't publicly documented,
-  // so confirm in your dashboard once a real CF_BEACON_TOKEN is wired up.
   if (typeof history.replaceState === "function") {
     history.replaceState(history.state, document.title, location.href);
   }
@@ -532,6 +552,8 @@ function wireInstallPrompt() {
 // Boot
 // ---------------------------------------------------------------------------
 
+initTheme();
+document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
 track("app_open");
 dispatch();
 registerServiceWorker();
