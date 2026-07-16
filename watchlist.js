@@ -3,7 +3,21 @@
 // Everything else (app.js) must go through these functions so that later we
 // can swap localStorage for a server sync without touching any UI code.
 
-const STORAGE_KEY = "gl-hub:watchlist";
+const OLD_STORAGE_KEY = "gl-hub:watchlist";
+const STORAGE_KEY = "faen:watchlist";
+
+// One-time migration: move saved shows from the old key to the new one.
+(function migrate() {
+  try {
+    const old = localStorage.getItem(OLD_STORAGE_KEY);
+    if (old) {
+      localStorage.setItem(STORAGE_KEY, old);
+      localStorage.removeItem(OLD_STORAGE_KEY);
+    }
+  } catch {
+    // Storage unavailable — nothing to migrate.
+  }
+})();
 
 function readIds() {
   try {
