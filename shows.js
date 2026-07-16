@@ -1,5 +1,5 @@
 // shows.js
-// Single source of truth for all show data in GL Hub.
+// Single source of truth for all show data in Faen.
 // Exports:
 //   shows  -> Array<Show>  (see field shapes below)
 //   META   -> { attribution: { tmdb }, contactEmail }
