@@ -1,10 +1,10 @@
 // sw.js
-// Minimal service worker: caches the app shell (+ shows.js) so GL Hub still
+// Minimal service worker: caches the app shell (+ shows.js) so Faen still
 // opens offline, and keeps the cache fresh in the background. No build step
 // — this is plain-array precaching, bump CACHE_NAME when you change any of
 // these files so clients pick up the new versions.
 
-const CACHE_NAME = "gl-hub-v1";
+const CACHE_NAME = "faen-v1";
 
 const APP_SHELL = [
   "./",
