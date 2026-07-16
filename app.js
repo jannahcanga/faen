@@ -1,5 +1,5 @@
 // app.js
-// GL Hub — all routing + rendering lives here. Vanilla JS, ES modules, no
+// Faen — all routing + rendering lives here. Vanilla JS, ES modules, no
 // build step. Every view is a plain template-string render into #app; we
 // re-render the whole view on any state change since the dataset is small.
 //
@@ -367,7 +367,7 @@ function renderAbout() {
     <p>Rights holders can reach me here:
       <a href="mailto:${escapeHTML(META.contactEmail)}">${escapeHTML(META.contactEmail)}</a>
     </p>
-    <p>GL Hub is an independent fan project. It is not affiliated with or endorsed by any studio, network, or streaming platform, and it never hosts or streams video — it only links to official sources.</p>
+    <p>Faen is an independent fan project. It is not affiliated with or endorsed by any studio, network, or streaming platform, and it never hosts or streams video — it only links to official sources.</p>
   `;
 }
 
