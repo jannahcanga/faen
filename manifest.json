@@ -1,6 +1,6 @@
 {
-  "name": "GL Hub",
-  "short_name": "gl-hub",
+  "name": "Faen",
+  "short_name": "faen",
   "id": "/",
   "description": "Release calendar and show tracker for Thai GL (Girls' Love) series. Links out to official platforms only.",
   "start_url": "./index.html",
