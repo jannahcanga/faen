@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Faen</title>
   <meta name="description" content="Faen — a release calendar and show tracker for Thai GL (Girls' Love) series. Find out when and where to watch, legally, on official platforms." />
-  <meta name="theme-color" content="#0f1115" />
+  <meta name="theme-color" content="#faf7f4" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1c1820" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Faen" />
 
   <!-- PWA manifest + icons (see manifest.json for full icon list/sizes) -->
   <link rel="manifest" href="manifest.json" />
@@ -29,8 +32,11 @@
   <header class="site-header">
     <div class="site-header__bar">
       <a class="brand" href="#/" aria-label="Faen home">Faen</a>
-      <!-- Hidden until the browser fires beforeinstallprompt (see app.js) -->
-      <button id="installBtn" class="btn btn--ghost" type="button" hidden>Install app</button>
+      <div class="header-actions">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch theme">☽</button>
+        <!-- Hidden until the browser fires beforeinstallprompt (see app.js) -->
+        <button id="installBtn" class="btn btn--ghost" type="button" hidden>Install app</button>
+      </div>
     </div>
     <nav class="site-nav" aria-label="Primary">
       <a href="#/" data-route="/">Home</a>
