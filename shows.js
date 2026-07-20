@@ -1,15 +1,51 @@
 // shows.js
 // Single source of truth for all show data in Faen.
 // Exports:
-//   shows  -> Array<Show>  (see field shapes below)
-//   META   -> { attribution: { tmdb }, contactEmail }
+//   shows  -> Array<Show>  (see TEMPLATE below for field shapes)
+//   META   -> { attribution, contactEmail, lastUpdated }
 //
-// Do not change the shape of these objects without updating every view that
-// reads them (app.js). Dates are ISO strings (YYYY-MM-DD). Times are 24h
-// "HH:MM" strings in the show's own timezone (schedule.timezone).
+// Field contract — do not change shapes without updating app.js:
+//   id            string     URL-safe slug
+//   title         { en, th, romanized }
+//   ship          string     ship name (e.g. "MindNuea")
+//   year          number
+//   country       string     ISO country code (e.g. "TH", "KR")
+//   status        "upcoming" | "airing" | "completed" | "hiatus"
+//   schedule      { airDay, airTimeTH, timezone, premiereDate, finaleDate, totalEpisodes, currentEpisode }
+//                 airDay is full English weekday ("Monday"…"Sunday")
+//                 airTimeTH is 24h "HH:MM" in Asia/Bangkok (UTC+7, no DST)
+//   watch         Array<{ platform, region, url, free, languages[] }>
+//   poster        { url, source, attribution }
+//   cast          Array<{ name, character, bio?, socials: { instagram?, x?, tiktok? } }>
+//                 bio is an optional plain-text biography string
+//   synopsis      string
+//   tags          string[]
+//   trailerUrl    string | undefined
 //
-// This is placeholder/example data so the app has something to render.
-// Replace with real shows, real posters, and real cast info before going live.
+// TEMPLATE (copy-paste to add a new show):
+// {
+//   id: "",
+//   title: { en: "", th: "", romanized: "" },
+//   ship: "",
+//   year: 2026,
+//   country: "TH",
+//   status: "upcoming",
+//   schedule: {
+//     airDay: "Friday",
+//     airTimeTH: "21:00",
+//     timezone: "Asia/Bangkok",
+//     premiereDate: "2026-01-01",
+//     finaleDate: "2026-03-01",
+//     totalEpisodes: 8,
+//     currentEpisode: 0,
+//   },
+//   watch: [{ platform: "", region: "", url: "", free: true, languages: ["Thai", "English subs"] }],
+//   poster: { url: "", source: "", attribution: "" },
+//   cast: [{ name: "", character: "", bio: "", socials: { instagram: "", x: "", tiktok: "" } }],
+//   synopsis: "",
+//   tags: [],
+//   trailerUrl: "",
+// },
 
 export const shows = [
   {
@@ -21,10 +57,11 @@ export const shows = [
     },
     ship: "MindNuea",
     year: 2026,
-    status: "airing", // "upcoming" | "airing" | "completed" | "hiatus"
+    country: "TH",
+    status: "airing",
     schedule: {
-      airDay: "Friday", // Monday..Sunday, used to place the show in the weekly grid
-      airTimeTH: "20:30", // 24h "HH:MM", local to `timezone`
+      airDay: "Friday",
+      airTimeTH: "20:30",
       timezone: "Asia/Bangkok",
       premiereDate: "2026-04-03",
       finaleDate: "2026-06-19",
@@ -56,11 +93,13 @@ export const shows = [
       {
         name: "Example Actress A",
         character: "Mind",
+        bio: "Placeholder bio — replace with the actress's real biography.",
         socials: { instagram: "https://instagram.com/", x: "", tiktok: "" },
       },
       {
         name: "Example Actress B",
         character: "Nuea",
+        bio: "",
         socials: { instagram: "", x: "https://x.com/", tiktok: "" },
       },
     ],
@@ -77,4 +116,5 @@ export const META = {
       "This product uses the TMDB API but is not endorsed or certified by TMDB.",
   },
   contactEmail: "hello@example.com",
+  lastUpdated: "2026-07-20",
 };
