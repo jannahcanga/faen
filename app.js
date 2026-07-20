@@ -10,7 +10,7 @@
 import { shows, META } from "./shows.js";
 import { getSaved, isSaved, add as addSaved, remove as removeSaved, toggle as toggleSaved } from "./watchlist.js";
 import { track } from "./analytics.js";
-import { getSavedTheme, saveTheme } from "./settings.js";
+import { getSetting, setSetting, getSavedTheme, saveTheme } from "./settings.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -114,6 +114,42 @@ const ICON_EMPTY_HEART = `<svg width="48" height="48" viewBox="0 0 24 24" fill="
   <path d="M12 21C12 21 3 14.5 3 8.5a5.5 5.5 0 0 1 9-4.243A5.5 5.5 0 0 1 21 8.5c0 6-9 12.5-9 12.5Z"/>
 </svg>`;
 
+// Person/account icon for the parked Account section
+const ICON_ACCOUNT = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <circle cx="12" cy="8" r="4"/>
+  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+</svg>`;
+
+// Common IANA timezone list for the time zone picker.
+// "auto" means "use the browser's detected zone" (the default).
+const TIMEZONES = [
+  { value: "auto",                  label: "Automatic (use my device)" },
+  { value: "Asia/Bangkok",          label: "Bangkok (UTC+7)" },
+  { value: "Asia/Singapore",        label: "Singapore (UTC+8)" },
+  { value: "Asia/Kuala_Lumpur",     label: "Kuala Lumpur (UTC+8)" },
+  { value: "Asia/Jakarta",          label: "Jakarta (UTC+7)" },
+  { value: "Asia/Manila",           label: "Manila (UTC+8)" },
+  { value: "Asia/Ho_Chi_Minh",      label: "Ho Chi Minh City (UTC+7)" },
+  { value: "Asia/Tokyo",            label: "Tokyo (UTC+9)" },
+  { value: "Asia/Seoul",            label: "Seoul (UTC+9)" },
+  { value: "Asia/Shanghai",         label: "Shanghai (UTC+8)" },
+  { value: "Asia/Taipei",           label: "Taipei (UTC+8)" },
+  { value: "Asia/Hong_Kong",        label: "Hong Kong (UTC+8)" },
+  { value: "Asia/Kolkata",          label: "India (UTC+5:30)" },
+  { value: "Asia/Dubai",            label: "Dubai (UTC+4)" },
+  { value: "Europe/London",         label: "London (GMT/BST)" },
+  { value: "Europe/Paris",          label: "Paris/Berlin (CET/CEST)" },
+  { value: "Europe/Moscow",         label: "Moscow (UTC+3)" },
+  { value: "America/New_York",      label: "New York (ET)" },
+  { value: "America/Chicago",       label: "Chicago (CT)" },
+  { value: "America/Denver",        label: "Denver (MT)" },
+  { value: "America/Los_Angeles",   label: "Los Angeles (PT)" },
+  { value: "America/Sao_Paulo",     label: "São Paulo (BRT)" },
+  { value: "Australia/Sydney",      label: "Sydney (AEST/AEDT)" },
+  { value: "Pacific/Auckland",      label: "Auckland (NZST/NZDT)" },
+];
+
 function updateThemeToggle() {
   document.querySelectorAll(".theme-toggle").forEach((btn) => {
     const dark = currentTheme() === "dark";
@@ -125,14 +161,18 @@ function updateThemeToggle() {
 function toggleTheme() {
   const next = currentTheme() === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
-  saveTheme(next);
+  setSetting("theme", next);
+  track("change_setting", { key: "theme" });
   updateThemeToggle();
 }
 
 function initTheme() {
-  const saved = getSavedTheme();
+  const saved = getSetting("theme");
   if (saved === "light" || saved === "dark") {
     document.documentElement.dataset.theme = saved;
+  } else {
+    // "system" or null — remove explicit override so CSS media query takes effect
+    delete document.documentElement.dataset.theme;
   }
 }
 
@@ -183,13 +223,22 @@ function getWeekDates() {
   });
 }
 
-// Bangkok is fixed UTC+7 (no DST). Convert "HH:MM" BKK → viewer's local time string.
+// Bangkok is fixed UTC+7 (no DST). Convert "HH:MM" BKK → viewer's preferred timezone.
 function bangkokToLocal(airTimeTH) {
   if (!airTimeTH) return "";
   const [h, m] = airTimeTH.split(":").map(Number);
   const now = new Date();
   const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h - 7, m));
-  return utc.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const tzSetting = getSetting("tz");
+  const opts = { hour: "2-digit", minute: "2-digit" };
+  if (tzSetting && tzSetting !== "auto") {
+    try {
+      return utc.toLocaleTimeString(undefined, { ...opts, timeZone: tzSetting });
+    } catch {
+      // Invalid IANA string — fall through to device default.
+    }
+  }
+  return utc.toLocaleTimeString(undefined, opts);
 }
 
 function statusBadge(status) {
@@ -232,6 +281,7 @@ function renderTopBar(route) {
     }
     case "person":   renderDetailTopBar(route.slug.replace(/-/g, " ")); break;
     case "about":    renderDetailTopBar("About");   break;
+    case "settings": renderSimpleTopBar("Settings"); break;
     default:         renderCalTopBar();
   }
   updateThemeToggle();
@@ -320,7 +370,7 @@ function handleSetScope(e) {
 // ---------------------------------------------------------------------------
 
 function updateTabActive(view) {
-  const TAB_MAP = { calendar: "calendar", shows: "shows", saved: "saved" };
+  const TAB_MAP = { calendar: "calendar", shows: "shows", saved: "saved", settings: "settings" };
   const active  = TAB_MAP[view] || "";
   tabBarEl.querySelectorAll(".tab-bar__item").forEach((a) => {
     const isActive = a.dataset.tab === active;
@@ -943,6 +993,115 @@ function renderAbout() {
 }
 
 // ---------------------------------------------------------------------------
+// Settings page
+// ---------------------------------------------------------------------------
+
+function renderSettings() {
+  track("open_settings");
+
+  const currentThemeVal = getSetting("theme") || "system";
+  const currentTz       = getSetting("tz")    || "auto";
+  const currentLang     = getSetting("lang")   || "en";
+
+  const themePills = [
+    { value: "light",  label: "Light" },
+    { value: "dark",   label: "Dark" },
+    { value: "system", label: "System" },
+  ].map(({ value, label }) => `
+    <button class="theme-pill${currentThemeVal === value ? " is-active" : ""}"
+            data-action="change-theme" data-theme="${value}"
+            aria-pressed="${currentThemeVal === value}">
+      ${escapeHTML(label)}
+    </button>`).join("");
+
+  const tzOptions = TIMEZONES.map(({ value, label }) =>
+    `<option value="${escapeHTML(value)}"${currentTz === value ? " selected" : ""}>${escapeHTML(label)}</option>`
+  ).join("");
+
+  appEl.innerHTML = `
+    <div class="settings-screen">
+
+      <!-- Appearance -->
+      <section class="settings-section" aria-labelledby="section-appearance">
+        <h2 class="settings-section__title" id="section-appearance">Appearance</h2>
+        <div class="settings-card">
+          <div class="settings-row settings-row--stack">
+            <span class="settings-row__label">Theme</span>
+            <div class="theme-picker" role="group" aria-label="Theme">
+              ${themePills}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Language -->
+      <section class="settings-section" aria-labelledby="section-language">
+        <h2 class="settings-section__title" id="section-language">Language</h2>
+        <div class="settings-card">
+          <div class="settings-row settings-row--stack">
+            <span class="settings-row__label">App language</span>
+            <select class="settings-select" data-action="change-lang" aria-label="App language">
+              <option value="en" selected>English</option>
+              <option value="__more" disabled>More coming soon…</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Time zone -->
+      <section class="settings-section" aria-labelledby="section-tz">
+        <h2 class="settings-section__title" id="section-tz">Time zone</h2>
+        <div class="settings-card">
+          <div class="settings-row settings-row--stack">
+            <span class="settings-row__label">
+              Air times
+              <span class="settings-row__sub">Shows air in Bangkok time (UTC+7). Converted to your chosen zone.</span>
+            </span>
+            <select class="settings-select" data-action="change-tz" aria-label="Time zone">
+              ${tzOptions}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Account (parked) -->
+      <section class="settings-section" aria-labelledby="section-account">
+        <h2 class="settings-section__title" id="section-account">Account</h2>
+        <div class="account-card" aria-describedby="account-desc">
+          <div class="account-card__icon" aria-hidden="true">${ICON_ACCOUNT}</div>
+          <p class="account-card__title">Coming soon</p>
+          <p class="account-card__body" id="account-desc">
+            Sign in to sync your saved shows and ratings across devices.
+          </p>
+          <button class="account-card__btn" disabled aria-disabled="true">Sign in</button>
+        </div>
+      </section>
+
+      <!-- About -->
+      <section class="settings-section" aria-labelledby="section-about">
+        <h2 class="settings-section__title" id="section-about">About</h2>
+        <div class="settings-card">
+          <a class="settings-row settings-row--link" href="#/about">
+            <span class="settings-row__label">About Faen</span>
+            <span class="settings-row__chevron" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </span>
+          </a>
+          ${META.lastUpdated ? `
+          <div class="settings-row settings-row--meta">
+            <span class="settings-row__label" style="font-weight:400">Data last updated</span>
+            <span class="settings-row__value">${escapeHTML(META.lastUpdated)}</span>
+          </div>` : ""}
+        </div>
+      </section>
+
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------------------
 // Toast — undo on un-heart from Saved tab
 // ---------------------------------------------------------------------------
 
@@ -1095,6 +1254,21 @@ document.addEventListener("click", (e) => {
     location.hash = "#/shows";
     return;
   }
+
+  if (action === "change-theme") {
+    const theme = e.target.closest("[data-action='change-theme']").dataset.theme;
+    setSetting("theme", theme);
+    track("change_setting", { key: "theme" });
+    if (theme === "light" || theme === "dark") {
+      document.documentElement.dataset.theme = theme;
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+    updateThemeToggle();
+    // Re-render to update pill active state
+    renderSettings();
+    return;
+  }
 });
 
 // Keyboard: Enter/Space on cast items
@@ -1105,6 +1279,25 @@ appEl.addEventListener("keydown", (e) => {
       e.preventDefault();
       castItem.click();
     }
+  }
+});
+
+// Settings selects — timezone and language use native <select> change events
+appEl.addEventListener("change", (e) => {
+  const action = e.target.dataset.action;
+
+  if (action === "change-tz") {
+    const tz = e.target.value;
+    setSetting("tz", tz);
+    track("change_setting", { key: "tz" });
+    return;
+  }
+
+  if (action === "change-lang") {
+    const lang = e.target.value;
+    setSetting("lang", lang);
+    track("change_setting", { key: "lang" });
+    return;
   }
 });
 
@@ -1147,9 +1340,10 @@ function parseHash() {
   const personMatch = hash.match(/^\/person\/(.+)$/);
   if (personMatch) return { view: "person", slug: decodeURIComponent(personMatch[1]) };
 
-  if (hash === "/shows") return { view: "shows" };
-  if (hash === "/saved") return { view: "saved" };
-  if (hash === "/about") return { view: "about" };
+  if (hash === "/shows")    return { view: "shows" };
+  if (hash === "/saved")    return { view: "saved" };
+  if (hash === "/about")    return { view: "about" };
+  if (hash === "/settings") return { view: "settings" };
   return { view: "calendar" };
 }
 
@@ -1167,6 +1361,7 @@ function dispatch() {
     case "show":     renderShowDetail(route.id); break;
     case "person":   renderPerson(route.slug);   break;
     case "about":    renderAbout();              break;
+    case "settings": renderSettings();           break;
     default:         renderCalendar();
   }
 
