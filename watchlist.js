@@ -40,6 +40,7 @@ function writeIds(ids) {
 
 /** Array of saved show ids. */
 export function getSaved() {
+  // FUTURE LOGIN HOOK — on first sign-in, pass readIds() to the server sync layer.
   return readIds();
 }
 
