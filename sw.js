@@ -4,7 +4,7 @@
 // — this is plain-array precaching, bump CACHE_NAME when you change any of
 // these files so clients pick up the new versions.
 
-const CACHE_NAME = "faen-v2";
+const CACHE_NAME = "faen-v3";
 
 const APP_SHELL = [
   "./",
