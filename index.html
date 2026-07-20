@@ -10,7 +10,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Faen" />
 
-  <!-- PWA manifest + icons (see manifest.json for full icon list/sizes) -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
@@ -26,37 +25,52 @@
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CF_BEACON_TOKEN"}'></script>
 </head>
 <body>
-  <!-- Lets keyboard users jump straight past the header/nav -->
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="site-header">
-    <div class="site-header__bar">
-      <a class="brand" href="#/" aria-label="Faen home">Faen</a>
-      <div class="header-actions">
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch theme">☽</button>
-        <!-- Hidden until the browser fires beforeinstallprompt (see app.js) -->
-        <button id="installBtn" class="btn btn--ghost" type="button" hidden>Install app</button>
-      </div>
-    </div>
-    <nav class="site-nav" aria-label="Primary">
-      <a href="#/" data-route="/">Home</a>
-      <a href="#/browse" data-route="/browse">Browse</a>
-      <a href="#/saved" data-route="/saved">Saved</a>
-      <a href="#/about" data-route="/about">About</a>
+  <div class="app-shell">
+    <!-- Top bar: content managed by app.js per route -->
+    <header class="top-bar" id="top-bar" role="banner"></header>
+
+    <!-- Main scroll area — the ONLY scrolling container -->
+    <main class="main-scroll" id="main" tabindex="-1">
+      <div id="app"></div>
+    </main>
+
+    <!-- Fixed bottom tab bar -->
+    <nav class="tab-bar" id="tab-bar" aria-label="Primary navigation">
+      <a class="tab-bar__item" href="#/" data-tab="calendar" aria-label="Calendar">
+        <span class="tab-bar__icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="3"/>
+            <path d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+        </span>
+        <span class="tab-bar__label">Calendar</span>
+      </a>
+      <a class="tab-bar__item" href="#/shows" data-tab="shows" aria-label="Shows">
+        <span class="tab-bar__icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="9" rx="1.5"/>
+            <rect x="3" y="15" width="7" height="6" rx="1.5"/>
+            <rect x="14" y="15" width="7" height="6" rx="1.5"/>
+          </svg>
+        </span>
+        <span class="tab-bar__label">Shows</span>
+      </a>
+      <a class="tab-bar__item" href="#/saved" data-tab="saved" aria-label="Saved">
+        <span class="tab-bar__icon tab-icon--heart" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21C12 21 3 14.5 3 8.5a5.5 5.5 0 0 1 9-4.243A5.5 5.5 0 0 1 21 8.5c0 6-9 12.5-9 12.5Z"/>
+          </svg>
+        </span>
+        <span class="tab-bar__label">Saved</span>
+      </a>
     </nav>
-  </header>
+  </div>
 
-  <!-- app.js renders every view into #app; #main just gives us a focus target -->
-  <main id="main" class="app" tabindex="-1">
-    <div id="app"></div>
-  </main>
-
-  <footer class="site-footer">
-    <p>
-      Faen links out to official platforms — it never hosts or streams video itself.
-      Not affiliated with or endorsed by any studio or platform.
-    </p>
-  </footer>
+  <!-- Toast (outside app-shell so it layers above everything) -->
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
   <script type="module" src="app.js"></script>
 </body>
