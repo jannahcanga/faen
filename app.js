@@ -84,6 +84,36 @@ const ICON_MOON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
 </svg>`;
 
+// Heart icons — filled for saved, outline for unsaved. Size param in px.
+function heartSVG(filled, size = 20) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24"
+    fill="${filled ? "currentColor" : "none"}" stroke="currentColor"
+    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 21C12 21 3 14.5 3 8.5a5.5 5.5 0 0 1 9-4.243A5.5 5.5 0 0 1 21 8.5c0 6-9 12.5-9 12.5Z"/>
+  </svg>`;
+}
+
+// Large line icons for empty states — 48px, inherits color (→ var(--text-dim) via CSS)
+const ICON_EMPTY_CALENDAR = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <rect x="3" y="4" width="18" height="18" rx="3"/>
+  <path d="M16 2v4M8 2v4M3 10h18"/>
+  <circle cx="8" cy="15" r="0.5" fill="currentColor"/>
+  <circle cx="12" cy="15" r="0.5" fill="currentColor"/>
+  <circle cx="16" cy="15" r="0.5" fill="currentColor"/>
+</svg>`;
+
+const ICON_EMPTY_SEARCH = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+  <circle cx="11" cy="11" r="8"/>
+  <path d="M21 21l-4.35-4.35"/>
+</svg>`;
+
+const ICON_EMPTY_HEART = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M12 21C12 21 3 14.5 3 8.5a5.5 5.5 0 0 1 9-4.243A5.5 5.5 0 0 1 21 8.5c0 6-9 12.5-9 12.5Z"/>
+</svg>`;
+
 function updateThemeToggle() {
   document.querySelectorAll(".theme-toggle").forEach((btn) => {
     const dark = currentTheme() === "dark";
@@ -352,7 +382,7 @@ function lineupCardHTML(show) {
               data-action="toggle-save" data-show-id="${show.id}"
               aria-pressed="${saved}"
               aria-label="${saved ? "Remove from saved" : "Save show"}">
-        ${saved ? "&#9829;" : "&#9825;"}
+        ${heartSVG(saved)}
       </button>
     </article>`;
 }
@@ -372,7 +402,7 @@ function buildCalLineup() {
   const isToday = calState.selectedDay === todayWeekdayName();
   el.innerHTML = `
     <div class="empty-state">
-      <div class="empty-state__icon">📺</div>
+      <div class="empty-state__icon">${ICON_EMPTY_CALENDAR}</div>
       <p class="empty-state__title">Nothing airing ${isToday ? "today" : "this day"}</p>
       ${calState.scope === "saved"
         ? `<p class="empty-state__body">No saved shows air on ${escapeHTML(calState.selectedDay)}.</p>`
@@ -534,7 +564,7 @@ function posterCardHTML(show) {
               data-action="toggle-save" data-show-id="${show.id}"
               aria-pressed="${saved}"
               aria-label="${saved ? "Remove from saved" : "Save show"}">
-        ${saved ? "&#9829;" : "&#9825;"}
+        ${heartSVG(saved)}
       </button>
     </div>`;
 }
@@ -603,7 +633,7 @@ function renderShows() {
       ${results.length
         ? `<div class="poster-grid">${results.map(posterCardHTML).join("")}</div>`
         : `<div class="empty-state">
-             <div class="empty-state__icon">&#128246;</div>
+             <div class="empty-state__icon">${ICON_EMPTY_SEARCH}</div>
              <p class="empty-state__title">No shows found</p>
              <p class="empty-state__body">Try a different search or clear your filters.</p>
              ${hasActiveFilters() ? `<button class="btn btn--ghost" data-action="clear-filters">Clear filters</button>` : ""}
@@ -650,7 +680,7 @@ function showCardHTML(show) {
               data-action="toggle-save" data-show-id="${show.id}"
               aria-pressed="${saved}"
               aria-label="${saved ? "Remove from saved" : "Save show"}">
-        ${saved ? "&#9829;" : "&#9825;"}
+        ${heartSVG(saved)}
       </button>
     </li>`;
 }
@@ -663,9 +693,9 @@ function renderSaved() {
     appEl.innerHTML = `
       <div class="main-content">
         <div class="empty-state">
-          <div class="empty-state__icon">&#9825;</div>
+          <div class="empty-state__icon">${ICON_EMPTY_HEART}</div>
           <p class="empty-state__title">No faves yet</p>
-          <p class="empty-state__body">Go find your ship 💗</p>
+          <p class="empty-state__body">Go find your ship</p>
           <a class="btn" href="#/shows">Browse shows</a>
         </div>
       </div>`;
@@ -796,7 +826,7 @@ function renderShowDetail(id) {
               <button class="btn ${saved ? "btn--active" : ""}" type="button"
                       data-action="toggle-save" data-show-id="${show.id}"
                       aria-pressed="${saved}">
-                ${saved ? "&#9829; Saved" : "&#9825; Save"}
+                ${heartSVG(saved, 16)} ${saved ? "Saved" : "Save"}
               </button>
               ${show.trailerUrl
                 ? `<a class="btn btn--ghost" href="${escapeHTML(show.trailerUrl)}"
@@ -1086,9 +1116,9 @@ function syncSaveButtons(id, saved) {
     btn.setAttribute("aria-pressed", String(saved));
     const isDetailBtn = btn.classList.contains("btn");
     if (isDetailBtn) {
-      btn.innerHTML = saved ? "&#9829; Saved" : "&#9825; Save";
+      btn.innerHTML = `${heartSVG(saved, 16)} ${saved ? "Saved" : "Save"}`;
     } else {
-      btn.innerHTML = saved ? "&#9829;" : "&#9825;";
+      btn.innerHTML = heartSVG(saved);
       btn.setAttribute("aria-label", saved ? "Remove from saved" : "Save show");
     }
   });
