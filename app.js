@@ -554,7 +554,7 @@ function getFilteredShows() {
     if (showsState.year && String(s.year) !== showsState.year) return false;
     if (showsState.tags.length && !showsState.tags.every((t) => (s.tags || []).includes(t))) return false;
     if (q) {
-      const hay = [s.title.en, s.title.th, s.title.romanized, s.ship].join(" ").toLowerCase();
+      const hay = [s.title.en, s.title.native, s.title.romanized, s.ship].join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -864,9 +864,10 @@ function renderShowDetail(id) {
             <h1 style="font-size:var(--text-xl);font-weight:700;letter-spacing:-0.02em;margin-bottom:4px">
               ${escapeHTML(show.title.en)}
             </h1>
+            ${(show.title.native || show.title.romanized) ? `
             <p class="show-detail__native">
-              ${escapeHTML(show.title.th)} · ${escapeHTML(show.title.romanized)}
-            </p>
+              ${[show.title.native, show.title.romanized].filter(Boolean).map(escapeHTML).join(" · ")}
+            </p>` : ""}
             <p class="show-detail__meta">
               ${escapeHTML(show.ship)} · ${show.year}
               ${show.country ? `· ${escapeHTML(show.country)}` : ""}
