@@ -6,7 +6,8 @@
 //
 // Field contract — do not change shapes without updating app.js:
 //   id            string     URL-safe slug
-//   title         { en, th, romanized }
+//   title         { en, native, romanized }
+//                 native = native/original-language title (e.g. Thai, Korean, Chinese); may be empty
 //   ship          string     ship name (e.g. "MindNuea")
 //   year          number
 //   country       string     ISO country code (e.g. "TH", "KR")
@@ -25,7 +26,7 @@
 // TEMPLATE (copy-paste to add a new show):
 // {
 //   id: "",
-//   title: { en: "", th: "", romanized: "" },
+//   title: { en: "", native: "", romanized: "" },
 //   ship: "",
 //   year: 2026,
 //   country: "TH",
@@ -52,7 +53,7 @@ export const shows = [
     id: "love-at-first-night",
     title: {
       en: "Love at First Night",
-      th: "รักครั้งแรกในคืนนั้น",
+      native: "รักครั้งแรกในคืนนั้น",
       romanized: "Rak Khrang Raek Nai Kuen Nan",
     },
     ship: "MindNuea",
